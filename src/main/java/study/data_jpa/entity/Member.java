@@ -1,31 +1,49 @@
 package study.data_jpa.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
 @Getter @Setter
-
+// JPA 기본 생성자를 직접 만들지 않고 Lombok으로 protected 생성자를 만든다.
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(of = {"id", "username", "age"})
 public class Member {
     @Id @GeneratedValue
+    // DB 컬럼명은 member_id로 두고, 자바 필드명은 id로 단순하게 사용한다.
+    @Column(name = "member_id")
     private Long id;
     private String username;
+    private int age;
 
-    // JPA는 기본 생성자가 필요하다.
-    // public 보다는 protected로 열어두는 것이 의도를 드러내기 좋다.
-    protected Member() {
-    }
+    // 지연 로딩으로 설정하면 Member를 조회할 때 Team을 바로 조회하지 않는다.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
 
-    // 학습용으로 username을 바로 넣어 생성할 수 있게 생성자를 추가했다.
+    // username만 빠르게 넣어 실습할 때 사용하는 간단 생성자
     public Member(String username) {
         this.username = username;
+    }
+
+    // 연관관계 실습용 생성자
+    // team이 있으면 changeTeam()을 통해 연관관계 편의 메서드를 사용한다.
+    public Member(String username, int age, Team team) {
+        this.username = username;
+        this.age = age;
+        if(team != null) {
+            changeTeam(team);
+        }
     }
 
     // 엔티티 값 변경은 메서드로 열어두면 나중에 의도를 파악하기 쉽다.
     public void changeUserName(String username) {
         this.username = username;
+    }
+
+    // 양방향 연관관계에서는 양쪽 값을 함께 맞춰주는 것이 중요하다.
+    public void changeTeam(Team team) {
+        this.team = team;
+        team.getMembers().add(this);
     }
 }
