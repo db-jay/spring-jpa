@@ -5,6 +5,9 @@ import lombok.*;
 
 @Entity
 @Getter @Setter
+// 지금 단계는 "Spring Data JPA가 왜 필요한가?"를 체감하기 전 단계다.
+// 먼저 순수 JPA 방식으로 엔티티를 직접 설계하고 값을 바꾸는 메서드도 손수 만들면서,
+// 나중에 Spring Data JPA가 어떤 반복 작업을 줄여주는지 비교해 보려는 학습 흐름이다.
 // JPA 기본 생성자를 직접 만들지 않고 Lombok으로 protected 생성자를 만든다.
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "username", "age"})
@@ -22,6 +25,7 @@ public class Member {
     private Team team;
 
     // username만 빠르게 넣어 실습할 때 사용하는 간단 생성자
+    // 이런 식으로 객체 생성도 하나씩 직접 다뤄보면서 엔티티 상태 변화를 눈으로 익힌다.
     public Member(String username) {
         this.username = username;
     }
@@ -36,7 +40,8 @@ public class Member {
         }
     }
 
-    // 엔티티 값 변경은 메서드로 열어두면 나중에 의도를 파악하기 쉽다.
+    // 지금은 update SQL을 직접 작성하지 않고도 값 변경이 반영되는지 배우는 단계다.
+    // 그래서 username 변경도 "값만 바꾸면 JPA가 변경 감지한다"는 흐름을 보여주기 위해 메서드로 열어둔다.
     public void changeUserName(String username) {
         this.username = username;
     }

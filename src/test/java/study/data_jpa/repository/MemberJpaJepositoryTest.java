@@ -1,11 +1,16 @@
 package study.data_jpa.repository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
 import study.data_jpa.entity.Member;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -14,6 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 class MemberJpaJepositoryTest {
 
     @Autowired MemberJpaJepository memberJpaJepository;
+    @PersistenceContext EntityManager em;
 
     @Test
     public void testMember() {
@@ -30,10 +36,54 @@ class MemberJpaJepositoryTest {
     }
 
     @Test
-    void save() {
+    public void basicCRUD() {
+        Member member1 = new Member("member1");
+        Member member2 = new Member("member2");
+
+        memberJpaJepository.save(member1);
+        memberJpaJepository.save(member2);
+
+//        단건 조회 검증
+        Member findMemberA = memberJpaJepository.findById(member1.getId()).get();
+        Member findMemberB = memberJpaJepository.findById(member2.getId()).get();
+        assertThat(findMemberA).isEqualTo(member1);
+        assertThat(findMemberB).isEqualTo(member2);
+
+//        리스트 조회 검증
+        List<Member> findAll = memberJpaJepository.findAll();
+        assertThat(findAll.size()).isEqualTo(2);
+
+        long count = memberJpaJepository.count();
+        assertThat(count).isEqualTo(2);
+
+        memberJpaJepository.delete(member1);
+        memberJpaJepository.delete(member2);
+
+        count = memberJpaJepository.count();
+        assertThat(count).isEqualTo(0);
     }
 
     @Test
-    void find() {
+    @Rollback(false)
+    public void dirtyChecking() {
+        Member member = new Member("memberA");
+        memberJpaJepository.save(member);
+
+        // 같은 트랜잭션 안에서 조회한 엔티티는 영속 상태다.
+        // 따라서 setter/비즈니스 메서드로 값만 바꿔도 JPA가 변경을 감지한다.
+        Member findMember = memberJpaJepository.find(member.getId());
+        findMember.changeUserName("memberAA");
+
+        // flush 시점에 update SQL이 DB로 반영된다.
+        em.flush();
+        em.clear();
+
+        // clear 이후 native query로 다시 읽으면 1차 캐시가 아니라 실제 DB 값을 확인할 수 있다.
+        String username = (String) em.createNativeQuery(
+                        "select username from member where member_id = :id")
+                .setParameter("id", member.getId())
+                .getSingleResult();
+
+        assertThat(username).isEqualTo("memberAA");
     }
 }
