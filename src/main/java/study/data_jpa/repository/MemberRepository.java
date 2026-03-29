@@ -3,8 +3,10 @@ package study.data_jpa.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import study.data_jpa.dto.MemberDto;
 import study.data_jpa.entity.Member;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
@@ -22,4 +24,21 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 간단한 고정 쿼리는 이 방식이 더 직관적이다.
     @Query("select m from Member m where m.username = :username and m.age = :age")
     List<Member> findUser(@Param("username") String username, @Param("age") int age);
+
+
+    // 엔티티 전체가 아니라 username 컬럼(정확히는 엔티티 필드)만 바로 조회한다.
+    // "필요한 값만 조회하면 반환 타입도 엔티티가 아니라 단순 타입이 될 수 있다"는 점을 보여준다.
+    @Query("select m.username from Member m")
+    List<String> findUsernameList();
+
+    // select new ... 구문을 사용하면 조회 결과를 엔티티가 아니라 DTO로 바로 받을 수 있다.
+    // 화면/응답에 필요한 값만 뽑아낼 때 자주 쓰며,
+    // 연관 엔티티 이름(team.name)도 한 번에 DTO로 묶어 올 수 있다.
+    @Query("select new study.data_jpa.dto.MemberDto(m.id, m.username, t.name) " + "from Member m join m.team t")
+    List<MemberDto> findMemberDto();
+
+    // 컬렉션 파라미터 바인딩 예제다.
+    // JPQL의 in 절에 List/Collection 을 넘기면 여러 username 조건을 한 번에 처리할 수 있다.
+    @Query("select m from Member m where m.username in :names")
+    List<Member> findByNames(@Param("names") Collection<String> names);
 }
