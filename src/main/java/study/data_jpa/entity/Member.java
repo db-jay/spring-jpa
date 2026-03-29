@@ -3,6 +3,8 @@ package study.data_jpa.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Getter @Setter
 // 지금 단계는 "Spring Data JPA가 왜 필요한가?"를 체감하기 전 단계다.
@@ -14,8 +16,14 @@ import lombok.*;
 public class Member {
     @Id @GeneratedValue
     // DB 컬럼명은 member_id로 두고, 자바 필드명은 id로 단순하게 사용한다.
+    // 엔티티 식별자는 보통 비즈니스 값(username)이 아니라 대체 키(Long id)로 두는 편이
+    // 변경에 안전하고 영속성 컨텍스트에서 관리하기도 수월하다는 점을 같이 학습한다.
     @Column(name = "member_id")
     private Long id;
+
+    // username, age는 이후 JPQL / 메서드 이름 기반 조회 조건에 자주 쓰인다.
+    // 그래서 단순 필드처럼 보여도 "엔티티의 상태를 어떻게 쿼리로 읽어오는가"를
+    // 연습하는 핵심 예제 값이다.
     private String username;
     private int age;
 
@@ -28,6 +36,22 @@ public class Member {
     // 이런 식으로 객체 생성도 하나씩 직접 다뤄보면서 엔티티 상태 변화를 눈으로 익힌다.
     public Member(String username) {
         this.username = username;
+    }
+
+    public Member(String username, int age) {
+        // username + age 조합은 테스트에서 조건 조회를 연습할 때 가장 자주 쓰는 생성 패턴이다.
+        // 순수 JPA, Spring Data JPA 둘 다 같은 엔티티를 쓰므로
+        // 엔티티 생성 비용보다 조회 방식 차이에 집중할 수 있게 해준다.
+        this.username = username;
+        this.age = age;
+    }
+
+    public Member(Long id, String username, int age) {
+        // 실무에서는 보통 식별자를 직접 넣어 생성하지 않지만,
+        // 테스트/학습에서는 "식별자까지 포함한 엔티티 모양"을 빠르게 확인할 때 도움이 된다.
+        this.id = id;
+        this.username = username;
+        this.age = age;
     }
 
     // 연관관계 실습용 생성자

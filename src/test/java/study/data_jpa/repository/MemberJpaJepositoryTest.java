@@ -7,7 +7,6 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.Rollback;
 import study.data_jpa.entity.Member;
 
 import java.util.List;
@@ -16,6 +15,9 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
+// 순수 JPA Repository 구현을 테스트한다.
+// 목적은 "EntityManager로 직접 구현하면 어떤 반복 코드가 생기는지"를 먼저 체감하고,
+// 이후 Spring Data JPA Repository와 비교하는 데 있다.
 class MemberJpaJepositoryTest {
 
     @Autowired MemberJpaJepository memberJpaJepository;
@@ -37,6 +39,8 @@ class MemberJpaJepositoryTest {
 
     @Test
     public void basicCRUD() {
+        // save / find / findAll / count / delete 를 직접 구현해 보면
+        // 단순 CRUD에도 반복 메서드가 계속 필요하다는 점을 확인할 수 있다.
         Member member1 = new Member("member1");
         Member member2 = new Member("member2");
 
@@ -64,7 +68,6 @@ class MemberJpaJepositoryTest {
     }
 
     @Test
-    @Rollback(false)
     public void dirtyChecking() {
         Member member = new Member("memberA");
         memberJpaJepository.save(member);
@@ -75,6 +78,8 @@ class MemberJpaJepositoryTest {
         findMember.changeUserName("memberAA");
 
         // flush 시점에 update SQL이 DB로 반영된다.
+        // 이 테스트는 commit까지 갈 필요 없이 같은 트랜잭션 안에서 flush/clear 후 다시 읽어
+        // 변경 감지를 확인할 수 있으므로 기본 rollback을 유지해도 충분하다.
         em.flush();
         em.clear();
 
@@ -85,5 +90,23 @@ class MemberJpaJepositoryTest {
                 .getSingleResult();
 
         assertThat(username).isEqualTo("memberAA");
+    }
+
+    @Test
+    public void findByUsernameAndAgeGreaterThan() {
+        // 이 테스트는 메서드 이름은 Spring Data JPA 스타일처럼 보이지만,
+        // 실제 내부 구현은 MemberJpaJepository 안에서 JPQL을 직접 작성한 버전이다.
+        // 즉 "조건 조회를 손으로 구현하면 이렇게 된다"는 기준점 역할을 한다.
+        Member aaa = new Member("AAA", 20);
+        Member bbb = new Member("BBB", 10);
+        memberJpaJepository.save(aaa);
+        memberJpaJepository.save(bbb);
+
+        List<Member> result = memberJpaJepository.findByUsernameAndAgeGreaterThan("AAA", 15);
+
+        // username = "AAA" 이면서 age > 15 조건을 만족하는 데이터만 남아야 한다.
+        assertThat(result.get(0).getUsername()).isEqualTo("AAA");
+        assertThat(result.get(0).getAge()).isEqualTo(20);
+        assertThat(result).hasSize(1);
     }
 }
