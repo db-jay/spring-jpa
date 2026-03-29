@@ -88,4 +88,20 @@ class MemberRepositoryTest {
         assertThat(result.get(0).getUsername()).isEqualTo("AAA");
         assertThat(result.get(0).getAge()).isEqualTo(20);
     }
+
+    @Test
+    public void findUser() {
+        // @Query 로 JPQL을 직접 적으면 메서드 이름 규칙을 길게 만들지 않고도
+        // 원하는 조건을 명시적으로 표현할 수 있다.
+        Member aaa = new Member("AAA", 20);
+        Member sameNameDifferentAge = new Member("AAA", 30);
+        memberRepository.save(aaa);
+        memberRepository.save(sameNameDifferentAge);
+
+        List<Member> result = memberRepository.findUser("AAA", 20);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getUsername()).isEqualTo("AAA");
+        assertThat(result.get(0).getAge()).isEqualTo(20);
+    }
 }

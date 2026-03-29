@@ -17,9 +17,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 지금은 호출하지 않아도 "제한 조회(limit)도 이름 규칙으로 표현할 수 있다"는 예시다.
     List<Member> findTop3HelloBy();
     
-    // @Query(name = ...) 는 JPQL 문자열을 여기 직접 적지 않고
-    // 엔티티에 정의한 NamedQuery를 찾아 사용한다.
-    // 즉, 메서드 이름 기반 조회와 명시적 쿼리(named query)를 둘 다 학습하는 예시다.
-    @Query(name = "Member.findByUsername")
-    List<Member> findByUsername(@Param("username") String username);
+    // @Query("...") 는 Repository 메서드 위에 JPQL을 직접 적는 방식이다.
+    // NamedQuery처럼 엔티티 쪽에 쿼리를 따로 두지 않아도 되므로
+    // 간단한 고정 쿼리는 이 방식이 더 직관적이다.
+    @Query("select m from Member m where m.username = :username and m.age = :age")
+    List<Member> findUser(@Param("username") String username, @Param("age") int age);
 }
