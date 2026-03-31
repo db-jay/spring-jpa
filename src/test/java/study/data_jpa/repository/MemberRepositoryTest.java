@@ -5,6 +5,10 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import study.data_jpa.dto.MemberDto;
 import study.data_jpa.entity.Member;
 import study.data_jpa.entity.Team;
@@ -164,4 +168,124 @@ class MemberRepositoryTest {
             System.out.println("member = " + member);
         }
     }
+
+    @Test
+    public void returnTypeTest() {
+        Member memberA = new Member("memberA", 10);
+        Member memberB = new Member("memberB", 10);
+        memberRepository.save(memberA);
+        memberRepository.save(memberB);
+
+        // 같은 username 이 여러 건이면 List 로 받는다.
+        List<Member> members = memberRepository.findListByUsername("memberA");
+        assertThat(members).hasSize(1);
+
+        // 단건 조회가 확실한 경우 Optional 로 받는다.
+        Member foundMember = memberRepository.findMemberByUsername("memberA").orElseThrow();
+        assertThat(foundMember.getUsername()).isEqualTo("memberA");
+    }
+
+
+    @Test
+    public void paging() throws Exception {
+
+        //given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 10));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 10));
+        memberRepository.save(new Member("member5", 10));
+
+        /*
+            // Page:
+            // content 조회 쿼리 + total count 쿼리 둘 다 필요할 때 사용한다.
+            // 관리자 화면처럼 "총 몇 건인지", "총 몇 페이지인지"를 보여줘야 하면 Page가 적합하다.
+            Page<Member> findByUsername(String name, Pageable pageable);
+
+            // Slice:
+            // total count는 모르지만 "다음 페이지가 있는지"만 알면 될 때 사용한다.
+            // 무한 스크롤 / 더보기 버튼처럼 성능을 조금 더 아끼고 싶을 때 유리하다.
+            Slice<Member> findByUsername(String name, Pageable pageable);
+
+            // List + Pageable:
+            // 현재 페이지 데이터만 단순히 잘라서 가져온다.
+            // total count, hasNext 같은 부가 정보는 없고 content만 필요할 때 가장 단순하다.
+            List<Member> findByUsername(String name, Pageable pageable);
+
+            // List + Sort:
+            // 페이지는 필요 없고 정렬만 필요할 때 사용한다.
+            List<Member> findByUsername(String name, Sort sort);
+        */
+
+        // Spring Data JPA는 페이지 번호를 0부터 시작한다.
+        // 아래 설정은 "0페이지에서, 3건을, username 내림차순으로" 가져오라는 뜻이다.
+        int age = 10;
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+
+        //when
+        // Page 반환 타입이므로
+        // 1) 실제 데이터 조회 쿼리
+        // 2) 전체 개수(count) 조회 쿼리
+        // 두 개가 나가는지 SQL 로그에서 확인해 보면 좋다.
+        Page<Member> page = memberRepository.findByAge(age, pageRequest);
+
+        // Page는 map()을 지원해서 페이징 메타데이터(total count, total pages 등)는 유지한 채
+        // content만 DTO로 안전하게 바꿀 수 있다.
+        Page<MemberDto> map = page.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
+
+        //then
+        List<Member> content = page.getContent(); // 현재 페이지(0페이지)의 실제 데이터 3건
+        long totalElements = page.getTotalElements();  // 조건에 맞는 전체 데이터 수
+
+        for (Member member : content) {
+            System.out.println("member = " + member);
+        }
+        System.out.println("totalElements = " + totalElements);
+
+        assertThat(content.size()).isEqualTo(3); // 현재 페이지에 담긴 데이터 개수
+        assertThat(totalElements).isEqualTo(5); // 조건에 맞는 전체 데이터 개수
+        assertThat(page.getTotalPages()).isEqualTo(2); // 전체 페이지 수 = ceil(5 / 3)
+        assertThat(page.getNumber()).isEqualTo(0); // 현재 페이지 번호
+        assertThat(page.isFirst()).isTrue(); // 첫 페이지인지
+        assertThat(page.hasNext()).isTrue(); // 다음 페이지가 있는지
+        assertThat(map.getContent()).hasSize(3); // DTO로 바꿔도 페이지 크기는 유지된다.
+    }
+
+/*
+    @Test
+    public void slice() throws Exception {
+
+        //given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 10));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 10));
+        memberRepository.save(new Member("member5", 10));
+
+        // Slice도 Pageable을 받기 때문에 정렬/크기 개념은 Page와 같다.
+        // 차이는 "전체 몇 건인지"는 계산하지 않는다는 점이다.
+        int age = 10;
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+
+        //when
+        // Slice는 보통 count 쿼리를 생략한다.
+        // 대신 다음 페이지 존재 여부를 알기 위해 size보다 1건 더 조회할 수 있다.
+        Slice<Member> page = memberRepository.findByAge(age, pageRequest);
+
+        //then
+        List<Member> content = page.getContent(); // 현재 조각(slice)에 담긴 데이터
+
+        for (Member member : content) {
+            System.out.println("member = " + member);
+        }
+
+        assertThat(content.size()).isEqualTo(3); // 현재 slice 데이터 개수
+//        assertThat(totalElements).isEqualTo(5); // 전체 개수 -> Slice는 모른다.
+//        assertThat(page.getTotalPages()).isEqualTo(2); // 전체 페이지 수 -> Slice는 모른다.
+        assertThat(page.getNumber()).isEqualTo(0); // 현재 페이지 번호는 알 수 있다.
+        assertThat(page.isFirst()).isTrue(); // 첫 페이지인지 알 수 있다.
+        assertThat(page.hasNext()).isTrue(); // 다음 페이지 존재 여부만 알면 된다.
+    }
+*/
+
 }

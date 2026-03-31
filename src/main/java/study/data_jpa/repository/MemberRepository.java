@@ -1,5 +1,8 @@
 package study.data_jpa.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -8,6 +11,7 @@ import study.data_jpa.entity.Member;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
     // 메서드 이름만으로 where username = ? and age > ? 쿼리를 만들어 준다.
@@ -41,4 +45,27 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // JPQL의 in 절에 List/Collection 을 넘기면 여러 username 조건을 한 번에 처리할 수 있다.
     @Query("select m from Member m where m.username in :names")
     List<Member> findByNames(@Param("names") Collection<String> names);
+
+
+    List<Member> findListByUsername(String username);     // 다수 Collection
+    Optional<Member> findMemberByUsername(String username); // 단수 Optional
+
+    // Pageable이 붙으면 Spring Data JPA가 limit/offset(또는 DB별 동등 문법)을 자동 적용한다.
+    // 반환 타입에 따라 동작 차이가 생긴다.
+    // 1) Page  : content 조회 + count 쿼리 추가 실행
+    // 2) Slice : content 조회만 하고, 다음 페이지가 있는지 보려고 size + 1 건 조회할 수 있다.
+    // 3) List  : count 쿼리 없이 content만 조회한다.
+    //
+    // 주의:
+    // @Query를 직접 쓰면 "findByAge" 같은 메서드 이름 조건은 자동으로 붙지 않는다.
+    // 즉 age 조건이 필요하면 JPQL에 where m.age = :age 를 직접 적어야 한다.
+    //
+    // 또 Page + fetch join 조합은 count 쿼리와 충돌할 수 있어
+    // 복잡한 쿼리에서는 countQuery를 따로 분리하는 패턴을 자주 사용한다.
+    @Query(value ="select m from Member m left join fetch m.team t")
+//    @Query(value ="select m from Member m left join m.team t", countQuery = "select count(m.username) from Member m")
+    Page<Member> findByAge(int age, Pageable pageable);
+//    Slice<Member> findByAge(int age, Pageable pageable);
+//    List<Member> findByAge(int age, Pageable pageable);
+
 }

@@ -6,7 +6,6 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.Rollback;
 
 import java.util.List;
 
@@ -17,8 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
 // 아직 Spring Data JPA의 편의 기능을 쓰기 전이므로,
 // EntityManager로 persist / flush / clear / 조회를 하나씩 직접 경험하면서
 // "왜 repository 추상화가 필요해졌는가"를 이해하는 학습용 테스트다.
-// 학습 중 SQL 결과를 직접 확인하기 위해 rollback을 끄고 본다.
-@Rollback(false)
+// 인메모리 DB 환경에서는 테스트 간 데이터 오염을 막기 위해 기본 rollback 을 유지한다.
+// SQL은 rollback 여부와 무관하게 로그로 충분히 확인할 수 있다.
 class MemberTest {
 
     @PersistenceContext
