@@ -1,5 +1,7 @@
 package study.data_jpa.repository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,8 @@ class MemberRepositoryTest {
     MemberRepository memberRepository;
     @Autowired
     TeamRepository teamRepository;
+    @PersistenceContext
+    EntityManager em;
 
     @Test
     public void testMember() {
@@ -288,4 +292,82 @@ class MemberRepositoryTest {
     }
 */
 
+
+    @Test
+    public void bulkUpdate() throws Exception {
+        //given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 19));
+        memberRepository.save(new Member("member3", 20));
+        memberRepository.save(new Member("member4", 21));
+        Member member5 = memberRepository.save(new Member("member5", 40));
+        //when
+        // 벌크 연산은 조회한 엔티티를 수정하는 방식이 아니라
+        // 조건에 맞는 row를 DB에서 한 번에 update 하는 방식이다.
+        int resultCount = memberRepository.bulkAgePlus(20);
+        Member refreshedMember5 = memberRepository.findById(member5.getId()).orElseThrow();
+
+        //then
+        assertThat(resultCount).isEqualTo(3);
+        assertThat(em.contains(member5)).isFalse(); // clearAutomatically = true 덕분에 기존 엔티티는 detach 된다.
+        assertThat(member5.getAge()).isEqualTo(40); // 이미 들고 있던 객체 값은 자동으로 41이 되지 않는다.
+        assertThat(refreshedMember5.getAge()).isEqualTo(41); // 다시 조회한 엔티티는 DB에 반영된 값을 읽는다.
+    }
+
+    @Test
+    public void findMemberLazy() {
+        //given
+        //member1 -> teamA
+        //member2 -> teamB
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+
+        Member member1 = new Member("member1");
+        member1.changeTeam(teamA);
+        Member member2 = new Member("member1");
+        member2.changeTeam(teamB);
+
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        // flush + clear를 해야 "이미 1차 캐시에 있어서 team이 보이는 착시"를 없애고
+        // 실제 SQL이 어떻게 나가는지(N+1이 나는지, fetch join/entity graph가 막는지) 관찰할 수 있다.
+        em.flush();
+        em.clear();
+
+        //when
+        // 1) 기본 findAll()을 쓰면 Member 조회 후 team을 접근할 때 추가 select가 발생할 수 있다.
+        // 2) @EntityGraph를 붙이면 JPQL을 직접 fetch join으로 바꾸지 않아도 team을 함께 조회한다.
+        // 3) 즉 EntityGraph는 "조회 조건을 바꾸는 도구"라기보다 "연관 로딩 전략을 선언하는 도구"에 가깝다.
+//        List<Member> members = memberRepository.findAll();
+
+
+        // JPQL fetch join 버전: 쿼리 자체를 직접 제어하고 싶을 때 사용한다.
+//        List<Member> members = memberRepository.fineMemberFetchJoin();
+
+
+        // @EntityGraph + JPQL 버전: JPQL은 단순하게 두고, team을 함께 가져오라는 힌트만 추가한다.
+//        List<Member> members = memberRepository.findMemberEntityGraph();
+
+
+        // @EntityGraph + 메서드명 기반 쿼리 버전:
+        // username 조건은 메서드 이름이 만들고, team fetch 전략은 EntityGraph가 담당한다.
+        List<Member> members = memberRepository.findEntityGraphByUsername("member1");
+
+
+        assertThat(members).hasSize(2);
+
+        for (Member member : members) {
+            // 1차캐시에서 Member 데이터 호출
+            System.out.println("member = " + member.getUsername());
+
+            // EntityGraph가 제대로 동작했다면 여기서 team 접근 시 추가 select 없이
+            // 이미 함께 조회된 team 프록시/엔티티 정보를 사용할 수 있다. (SQL 로그로 확인)
+            System.out.println("member.teamClass() = " + member.getTeam().getClass());
+            System.out.println("member.getTeam().getName() = " + member.getTeam().getName());
+        }
+    }
 }

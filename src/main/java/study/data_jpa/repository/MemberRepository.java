@@ -3,7 +3,9 @@ package study.data_jpa.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import study.data_jpa.dto.MemberDto;
@@ -67,5 +69,37 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Page<Member> findByAge(int age, Pageable pageable);
 //    Slice<Member> findByAge(int age, Pageable pageable);
 //    List<Member> findByAge(int age, Pageable pageable);
+
+    // 벌크 update/delete 는 엔티티를 한 건씩 dirty checking 하지 않고
+    // DB에 바로 반영된다. 그래서 같은 트랜잭션 안에서 이미 조회해 둔 Member가 있다면
+    // 메모리 값과 DB 값이 어긋날 수 있으므로 clearAutomatically = true 로 정합성을 맞춘다.
+    @Modifying(clearAutomatically = true) // 벌크 쿼리 직후 영속성 컨텍스트를 비워 다음 조회가 DB 값을 다시 읽게 한다.
+    @Query("update Member m set m.age = m.age + 1 where m.age >= :age")
+    int bulkAgePlus(@Param("age") int age);
+
+
+    // 단순 JPQL
+    @Query("select m from Member m left join fetch m.team")
+    List<Member> fineMemberFetchJoin();
+
+    // @EntityGraph는 "어떤 연관관계를 함께 조회할지"만 fetch plan으로 지정한다.
+    // JPQL을 직접 fetch join으로 바꾸지 않아도 되므로,
+    // 기본 CRUD 메서드(findAll)도 override 해서 즉시 로딩 전략만 덮어쓸 수 있다.
+    @Override
+    @EntityGraph(attributePaths = "team")
+    List<Member> findAll();
+
+    // 여기서는 조회 조건은 그대로 두고(team 조건을 추가하지 않음),
+    // member를 조회할 때 team도 함께 읽어오라고 힌트만 준다.
+    // 즉 "쿼리 조건"과 "연관관계 로딩 전략"을 분리해서 학습하기 좋은 예제다.
+    @EntityGraph(attributePaths = "team")
+    @Query("select m from Member m")
+    List<Member> findMemberEntityGraph();
+
+
+    // 메서드명 기반 쿼리에서도 @EntityGraph를 함께 쓸 수 있다.
+    // 그래서 "조건은 메서드명 파생 쿼리", "연관 엔티티 로딩은 EntityGraph"로 역할을 나눌 수 있다.
+    @EntityGraph(attributePaths = "team")
+    List<Member> findEntityGraphByUsername(@Param("username") String username);
 
 }
