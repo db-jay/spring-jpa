@@ -36,4 +36,19 @@ public class BaseEntity {
     // 마지막 수정한 사용자를 기록한다.
     @LastModifiedBy
     public String updatedBy;
+
+    // soft delete 용 플래그다.
+    // 실제 row를 바로 지우지 않고 "삭제된 데이터"로 표시만 해 두면
+    // 복구, 감사 추적, 운영 이력 확인이 쉬워진다.
+    @Column(name = "is_deleted", nullable = false)
+    public boolean deleted = false;
+
+    // delete() SQL을 바로 날리는 대신 상태만 바꾸는 soft delete 예제다.
+    public void markDeleted() {
+        this.deleted = true;
+    }
+
+    public void restore() {
+        this.deleted = false;
+    }
 }
