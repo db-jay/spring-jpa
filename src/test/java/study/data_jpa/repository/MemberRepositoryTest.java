@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import study.data_jpa.dto.MemberDto;
 import study.data_jpa.entity.Member;
@@ -406,5 +405,35 @@ class MemberRepositoryTest {
 
         // 핵심: 낙관적 락(@Version)은 "충돌을 나중에 감지"하고,
         // 비관적 락은 "충돌 가능성이 큰 구간을 DB lock으로 먼저 막는다."
+    }
+
+    @Test
+    public void callCustom() {
+        // 호출하는 쪽에서는 JpaRepository 기본 메서드와 동일한 memberRepository 빈을 사용하지만,
+        // 실제 실행은 Spring Data가 연결한 MemberRepositoryImpl 쪽 사용자 정의 구현으로 위임된다.
+        List<Member> result = memberRepository.findMemberCustom();
+    }
+
+    @Test
+    public void jpaEventBaseEntity() throws Exception {
+        //given
+        Member member = new Member("member1");
+        // save 시점에 AuditingEntityListener가 동작해 createdAt/createdBy 를 채운다.
+        memberRepository.save(member);
+        Thread.sleep(100);
+        member.setUsername("member2");
+        // flush 시 dirty checking 으로 update 가 발생하면 updatedAt/updatedBy 도 함께 갱신된다.
+        em.flush();
+        em.clear();
+
+        //when
+        Member findMember = memberRepository.findById(member.getId()).get();
+
+        //then
+        // 핵심은 "직접 시간/사용자를 넣지 않아도" Auditing 설정만으로 공통 이력이 채워진다는 점이다.
+        System.out.println("findMember.createdDate = " + findMember.getCreatedAt());
+        System.out.println("findMember.updatedDate = " + findMember.getUpdatedAt());
+        System.out.println("findMember.createdBy = " + findMember.getCreatedBy());
+        System.out.println("findMember.updatedBy = " + findMember.getUpdatedBy());
     }
 }

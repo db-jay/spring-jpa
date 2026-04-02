@@ -12,7 +12,7 @@ import java.util.List;
 // Team도 JPA 규칙에 맞게 protected 기본 생성자를 둔다.
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "name"})
-public class Team {
+public class Team extends BaseEntity {
 
     @Id @GeneratedValue
     // DB 컬럼명은 team_id를 사용한다.

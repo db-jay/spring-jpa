@@ -13,7 +13,7 @@ import java.util.List;
 // JPA 기본 생성자를 직접 만들지 않고 Lombok으로 protected 생성자를 만든다.
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "username", "age"})
-public class Member {
+public class Member extends BaseEntity{
     @Id @GeneratedValue
     // DB 컬럼명은 member_id로 두고, 자바 필드명은 id로 단순하게 사용한다.
     // 엔티티 식별자는 보통 비즈니스 값(username)이 아니라 대체 키(Long id)로 두는 편이

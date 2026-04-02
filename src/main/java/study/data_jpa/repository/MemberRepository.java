@@ -14,7 +14,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface MemberRepository extends JpaRepository<Member, Long> {
+// Spring Data JPA 기본 기능(JpaRepository)에
+// 직접 만든 확장 기능(MemberRepositoryCustom)도 함께 합쳐서 사용하는 구조다.
+// 즉 클라이언트 입장에서는 "한 repository 빈"처럼 보이지만,
+// 내부적으로는 Spring Data 구현 + 사용자 정의 구현이 조합된다.
+public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom {
     // 메서드 이름만으로 where username = ? and age > ? 쿼리를 만들어 준다.
     // 직접 JPQL을 작성하던 순수 JPA Repository와 비교하면
     // "단순 조회 메서드는 선언만으로 끝난다"는 것이 Spring Data JPA의 핵심 학습 포인트다.
