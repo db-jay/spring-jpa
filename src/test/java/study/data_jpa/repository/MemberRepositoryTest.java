@@ -370,4 +370,41 @@ class MemberRepositoryTest {
             System.out.println("member.getTeam().getName() = " + member.getTeam().getName());
         }
     }
+
+    @Test
+    public void queryHint() {
+        // given
+        Member member1 = memberRepository.save(new Member("member1", 10));
+        em.flush();
+        em.clear();
+
+        // when
+        // readOnly 힌트가 붙은 조회이므로
+        // 엔티티를 조회해도 스냅샷을 만들지 않아 변경 감지 비용을 줄일 수 있다.
+        Member findMember = memberRepository.findReadOnlyByUsername("member1");
+        findMember.setUsername("jay");
+
+        // 일반 조회였다면 flush 시 update SQL이 나갈 수 있지만,
+        // readOnly 힌트 덕분에 dirty checking 대상이 아니어서 update가 발생하지 않는다.
+        em.flush();
+
+        // 핵심: "엔티티를 수정하지 못하게 막는 것"이 아니라
+        // "수정해도 변경 감지/쓰기 반영을 하지 않게 최적화"하는 용도다.
+    }
+
+    @Test
+    public void lock() {
+        // given
+        Member member1 = memberRepository.save(new Member("member1", 10));
+        em.flush();
+        em.clear();
+
+        // when
+        // 비관적 락은 조회하면서 DB row에 lock을 건다.
+        // SQL 로그에서 select ... for update 형태가 보이면 lock 힌트가 반영된 것이다.
+        List<Member> findMember = memberRepository.findLockByUsername("member1");
+
+        // 핵심: 낙관적 락(@Version)은 "충돌을 나중에 감지"하고,
+        // 비관적 락은 "충돌 가능성이 큰 구간을 DB lock으로 먼저 막는다."
+    }
 }

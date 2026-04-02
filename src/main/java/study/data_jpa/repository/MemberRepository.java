@@ -1,12 +1,11 @@
 package study.data_jpa.repository;
 
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import study.data_jpa.dto.MemberDto;
 import study.data_jpa.entity.Member;
@@ -102,4 +101,15 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @EntityGraph(attributePaths = "team")
     List<Member> findEntityGraphByUsername(@Param("username") String username);
 
+    // Query Hint는 "이 조회를 어떻게 최적화할지" JPA 구현체에게 힌트를 주는 장치다.
+    // 여기서는 Hibernate readOnly 힌트를 써서,
+    // 조회한 엔티티를 변경 감지(dirty checking) 대상에서 제외하는 학습 예제다.
+    @QueryHints(value = @QueryHint(name = "org.hibernate.readOnly", value = "true"))
+    Member findReadOnlyByUsername(String username);
+
+    // @Lock은 조회 시점에 DB lock 전략을 함께 지정한다.
+    // PESSIMISTIC_WRITE 는 보통 select ... for update 로 번역되어
+    // "지금 읽은 row를 다른 트랜잭션이 함부로 수정하지 못하게" 막는 비관적 락 예제다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<Member> findLockByUsername(String username);
 }
