@@ -2,10 +2,12 @@ spring:
   application:
     name: data-jpa
   datasource:
-    # 앱 실행, 테스트, H2 콘솔에서 같은 DB를 보려면 TCP 서버 모드로 맞춘다.
-    # 홈 디렉터리의 ~/datajpa 대신 프로젝트 전용 파일을 써서 다른 H2 실습과 충돌을 피한다.
-    # 먼저 H2 TCP 서버가 켜져 있어야 한다.
-    url: jdbc:h2:tcp://localhost:9092/~/git/spring-jpa/h2db/datajpa
+    # TCP 서버(jdbc:h2:tcp://...)를 쓰면 먼저 9092 포트의 H2 서버를 따로 띄워야 한다.
+    # 로컬 학습용 실행은 외부 H2 서버 의존성을 없애기 위해 파일 모드로 둔다.
+    # 이렇게 하면 DataJpaApplication만 실행해도 같은 프로젝트 폴더의 DB 파일을 바로 사용한다.
+    # AUTO_SERVER=TRUE 를 주면 같은 파일 DB를 H2 콘솔/별도 프로세스가 함께 열 때
+    # 파일 lock 충돌을 줄일 수 있어 로컬 학습에 더 편하다.
+    url: jdbc:h2:file:./h2db/datajpa;AUTO_SERVER=TRUE
     username: sa
     password:
     driver-class-name: org.h2.Driver
@@ -35,3 +37,8 @@ logging:
     org.hibernate.SQL: debug
     # 바인딩 값까지 보고 싶을 때만 아래 주석을 잠깐 해제한다.
     # org.hibernate.orm.jdbc.bind: trace
+
+study:
+  seed:
+    # 로컬 학습 실행 시 /members 에서 바로 데이터를 보려고 초기 멤버 100건을 넣는다.
+    enabled: true

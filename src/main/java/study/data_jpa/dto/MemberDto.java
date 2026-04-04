@@ -1,6 +1,7 @@
 package study.data_jpa.dto;
 
 import lombok.Data;
+import study.data_jpa.entity.Member;
 
 @Data
 // DTO는 엔티티를 그대로 외부로 노출하지 않고
@@ -20,5 +21,11 @@ public class MemberDto {
         this.id = id;
         this.username = username;
         this.teamName = teamName;
+    }
+
+    public MemberDto(Member member) {
+        this.id = member.getId();
+        this.username = member.getUsername();
+        this.teamName = member.getTeam() != null ? member.getTeam().getName() : null;
     }
 }
