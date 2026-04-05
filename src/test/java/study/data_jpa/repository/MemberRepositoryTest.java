@@ -436,4 +436,41 @@ class MemberRepositoryTest {
         System.out.println("findMember.createdBy = " + findMember.getCreatedBy());
         System.out.println("findMember.updatedBy = " + findMember.getUpdatedBy());
     }
+
+    @Test
+    public void projections() throws Exception {
+        //given
+        Team teamA = new Team("teamA");
+        em.persist(teamA);
+        Member m1 = new Member("m1", 0, teamA);
+        Member m2 = new Member("m2", 0, teamA);
+        em.persist(m1);
+        em.persist(m2);
+        em.flush();
+        // projection SQL을 눈으로 확인할 때 1차 캐시 영향 없이 DB 조회가 일어나게 비운다.
+        em.clear();
+
+        //when
+        // DTO projection을 고르면 username 컬럼만 바로 DTO로 매핑되는 흐름을 보기 쉽다.
+        List<UsernameOnlyDto> result = memberRepository.findProjectionsByUsername("m1", UsernameOnlyDto.class);
+
+        // 중첩 projection은 문법상 필요한 필드만 선언해도
+        // team 연관 객체 접근이 들어가는 순간 join이 필요해 "딱 필요한 컬럼만" 조회한다는 느낌이 약해진다.
+/*        List<NestedClosedProjection> result = memberRepository.findProjectionsByUsername("m1", NestedClosedProjection.class);*/
+
+        //then
+        for (UsernameOnlyDto usernameOnly : result) {
+            System.out.println("usernameOnly = " + usernameOnly.getUsername());
+        }
+
+/*
+        for (NestedClosedProjection nested : result) {
+            String username = nested.getUsername();
+            System.out.println("username = " + username);
+
+            String teamName = nested.getTeam().getName();
+            System.out.println("teamName = " + teamName);
+        }
+*/
+    }
 }

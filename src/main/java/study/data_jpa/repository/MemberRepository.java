@@ -116,4 +116,8 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
     // "지금 읽은 row를 다른 트랜잭션이 함부로 수정하지 못하게" 막는 비관적 락 예제다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<Member> findLockByUsername(String username);
+
+    // 반환 타입(Class<T>)을 파라미터로 넘기면
+    // 같은 메서드라도 인터페이스 기반/DTO 기반 projection을 상황에 따라 바꿔가며 재사용할 수 있다.
+    <T> List<T> findProjectionsByUsername(@Param("username") String username, Class<T> type);
 }
