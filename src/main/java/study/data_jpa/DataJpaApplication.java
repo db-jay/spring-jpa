@@ -31,7 +31,7 @@ public class DataJpaApplication {
 		return () -> Optional.of(UUID.randomUUID().toString()); // 실무에서는 SpringSecurity등을 사용. 테스트 예시
 	}
 
-	@Bean
+/*	@Bean
 	@ConditionalOnProperty(name = "study.seed.enabled", havingValue = "true")
 	public CommandLineRunner initData(MemberRepository memberRepository) {
 		// 학습용 실행에서는 /members 호출 시 바로 데이터가 보이도록 초기 멤버를 넣어 둔다.
@@ -41,5 +41,5 @@ public class DataJpaApplication {
 				memberRepository.save(new Member("user" + i, i));
 			}
 		};
-	}
+	}*/
 }
