@@ -473,4 +473,32 @@ class MemberRepositoryTest {
         }
 */
     }
+    @Test
+    public void nativeQuery() {
+        //given
+        Team teamA = new Team("teamA");
+        em.persist(teamA);
+
+        Member m1 = new Member("m1", 0, teamA);
+        Member m2 = new Member("m2", 0, teamA);
+        em.persist(m1);
+        em.persist(m2);
+
+        em.flush();
+        // native query도 영속성 컨텍스트 캐시가 아니라 실제 SQL 결과를 보려면 비우고 확인하는 편이 좋다.
+        em.clear();
+
+        //when
+        // page size를 실제 데이터보다 작게 줘야 content 조회와 count 조회가 왜 분리되는지 관찰하기 쉽다.
+        Page<MemberProjection> result = memberRepository.findByNativeProjection(PageRequest.of(0, 1));
+        List<MemberProjection> content = result.getContent();
+        for (MemberProjection memberProjection : content) {
+            System.out.println("memberProjection = " + memberProjection.getUsername());
+            System.out.println("memberProjection = " + memberProjection.getTeamName());
+        }
+
+        assertThat(content).hasSize(1);
+        assertThat(result.getTotalElements()).isEqualTo(2);
+
+    }
 }

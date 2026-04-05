@@ -4,7 +4,6 @@ import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import study.data_jpa.dto.MemberDto;
@@ -120,4 +119,19 @@ public interface MemberRepository extends JpaRepository<Member, Long>, MemberRep
     // 반환 타입(Class<T>)을 파라미터로 넘기면
     // 같은 메서드라도 인터페이스 기반/DTO 기반 projection을 상황에 따라 바꿔가며 재사용할 수 있다.
     <T> List<T> findProjectionsByUsername(@Param("username") String username, Class<T> type);
+
+    // native query는 JPQL이 아니라 DB SQL을 직접 쓰는 "탈출구"다.
+    // 복잡한 튜닝/DB 전용 문법이 필요할 때 쓰지만, DB 변경 시 가장 먼저 깨질 수 있는 지점이기도 하다.
+    @Query(value = "select * from member where username = ?", nativeQuery = true)
+    Member findByNativeQuery(String username);
+
+
+    // native query + projection 조합에서는 select alias가 getter 이름과 맞아야 한다.
+    // 또 Page 반환 타입이면 content 쿼리와 count 쿼리를 분리해 주는 편이 안전하다.
+    @Query(value = "SELECT m.member_id as id, m.username, t.name as teamName " +
+            "FROM member m left join team t ON m.team_id = t.team_id",
+            countQuery = "SELECT count(*) from member",
+            nativeQuery = true)
+    Page<MemberProjection> findByNativeProjection(Pageable pageable);
+
 }
